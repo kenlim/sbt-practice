@@ -12,7 +12,7 @@ object ExperimentalBuild extends Build {
   // SETTINGS
 
   lazy val buildSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ Seq(
-    name := "wtf-sbt-fd",
+    name := "sbt-cachebusttest",
     version := "1.0",
     scalaVersion := "2.9.2"
   )
