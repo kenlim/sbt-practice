@@ -8,7 +8,7 @@ object ExperimentalBuild extends Build {
   lazy val project = Project("project", file("."),
     settings = buildSettings
   ).settings(
-    resourceGenerators in Compile <+= addHashedResourceFilesWithIndex)
+    resourceGenerators in Compile <+= generateHashedResourcesWithIndexFile)
 
   lazy val buildSettings: Seq[Setting[_]] = Defaults.defaultSettings ++ Seq(
     name := "sbt-cachebusttest",
@@ -16,21 +16,36 @@ object ExperimentalBuild extends Build {
     scalaVersion := "2.9.2"
   )
 
-  // Should go and get all the unmanaged resources,
-  // hash them, and put the result in the managed resource folder
-  val addHashedResourceFilesWithIndex =
-    (unmanagedResources, resourceManaged, cacheDirectory, resourceDirectories) map {
-      (src, dest, cache,  dirs) =>
-        val cacheFile = cache / "copy-resources"
-        val mappings = (src --- dirs) x (rebase(dirs, dest) | flat(dest))
-        mappings map { (source, target) =>
-          val nameComponents = target.name.split('.')
-          val newName = nameComponents.dropRight(1) :: "hash" :: nameComponents.last
-          newName.mkString(".")
+  // Get all the unmanaged resources, hash them,
+  // then put the result in the managed resource folder
+  val generateHashedResourcesWithIndexFile =
+    (unmanagedResourceDirectories in Compile, sourceManaged, cacheDirectory, streams) map {
+      (resourceDirs, target, cache, s) =>
+        val cacheFolder = cache / "hashed-resources"
+        val allResources = (resourceDirs map { dir => (dir ** "*") get}).flatten
+        val resourcesToHash = allResources map { resource =>
+          s.log.info("Name: %s".format(resource.getPath) )
+          val nameComponents = resource.getPath.split('.')
+          val newName = nameComponents.dropRight(1).toList ::: "hash" :: nameComponents.last :: Nil
+          (resource, file(newName.mkString(".")))
         }
-        Sync(cacheFile)( mappings )
-
+        Sync(cacheFolder)(resourcesToHash)
+        resourcesToHash map { case(original, hashed) => hashed }
     }
+
+
+//    (unmanagedResources, resourceManaged, resourceDirectories, cacheDirectory) map {
+//      (originalResources, managedResourceFolder, resourceDirectories, cache) =>
+//        val cacheFile = cache / "copy-resources"
+//        val mappings = (originalResources --- resourceDirectories) x (rebase(resourceDirectories, managedResourceFolder))
+//        val newMappings = mappings map { case(source, target) =>
+//          val nameComponents = target.name.split('.')
+//          val newName = nameComponents.dropRight(1).toList ::: "hash" :: nameComponents.last
+//          newName.mkString(".")
+//        }
+//        Sync(cacheFile)( mappings )
+//        newMappings map { case(source, target) => target}
+//    }
 }
 
 
