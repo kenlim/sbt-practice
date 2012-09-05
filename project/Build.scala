@@ -1,7 +1,6 @@
 import sbt._
 import Keys._
-import java.io.File
-import sbt.Path._
+
 
 object ExperimentalBuild extends Build {
 
@@ -22,30 +21,27 @@ object ExperimentalBuild extends Build {
     (unmanagedResourceDirectories in Compile, sourceManaged, cacheDirectory, streams) map {
       (resourceDirs, target, cache, s) =>
         val cacheFolder = cache / "hashed-resources"
-        val allResources = (resourceDirs map { dir => (dir ** "*") get}).flatten
-        val resourcesToHash = allResources map { resource =>
-          s.log.info("Name: %s".format(resource.getPath) )
-          val nameComponents = resource.getPath.split('.')
-          val newName = nameComponents.dropRight(1).toList ::: "hash" :: nameComponents.last :: Nil
-          (resource, file(newName.mkString(".")))
+        val mapOfOriginalToTarget = resourceDirs map {dir =>
+            ((dir ** "*") filter { _.isFile}).get x rebase(dir, target.getPath)
+          } flatten
+
+        s.log.info("map of original to target\n" + mapOfOriginalToTarget)
+
+        val mapOfOriginalToHashedFiles = mapOfOriginalToTarget map { case(original, dest) =>
+            val nameComponents = dest.split('.')
+            val newName = nameComponents.dropRight(1).toList ::: "hash" :: nameComponents.last :: Nil
+            (original, file(newName.mkString(".")))
         }
-        Sync(cacheFolder)(resourcesToHash)
-        resourcesToHash map { case(original, hashed) => hashed }
+
+        s.log.info("map of original to hashed files\n" + mapOfOriginalToHashedFiles)
+
+        Sync(cacheFolder)(mapOfOriginalToHashedFiles)
+
+        val result = mapOfOriginalToHashedFiles map {case(original, dest) => dest}
+
+        s.log.info("Final Output\n" + result)
+        result
     }
-
-
-//    (unmanagedResources, resourceManaged, resourceDirectories, cacheDirectory) map {
-//      (originalResources, managedResourceFolder, resourceDirectories, cache) =>
-//        val cacheFile = cache / "copy-resources"
-//        val mappings = (originalResources --- resourceDirectories) x (rebase(resourceDirectories, managedResourceFolder))
-//        val newMappings = mappings map { case(source, target) =>
-//          val nameComponents = target.name.split('.')
-//          val newName = nameComponents.dropRight(1).toList ::: "hash" :: nameComponents.last
-//          newName.mkString(".")
-//        }
-//        Sync(cacheFile)( mappings )
-//        newMappings map { case(source, target) => target}
-//    }
 }
 
 
