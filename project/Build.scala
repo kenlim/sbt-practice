@@ -18,7 +18,7 @@ object ExperimentalBuild extends Build {
   // Get all the unmanaged resources, hash them,
   // then put the result in the managed resource folder
   val generateHashedResourcesWithIndexFile =
-    (unmanagedResourceDirectories in Compile, sourceManaged, cacheDirectory, streams) map {
+    (unmanagedResourceDirectories in Compile, resourceManaged, cacheDirectory, streams) map {
       (resourceDirs, target, cache, s) =>
         val cacheFolder = cache / "hashed-resources"
         val mapOfOriginalToTarget = resourceDirs map {dir =>
