@@ -18,17 +18,19 @@ object ExperimentalBuild extends Build {
   // Get all the unmanaged resources, hash them,
   // then put the result in the managed resource folder
   val generateHashedResourcesWithIndexFile =
-    (unmanagedResourceDirectories in Compile, resourceManaged, cacheDirectory, streams) map {
+    (unmanagedResourceDirectories in Compile, resourceManaged in Compile, cacheDirectory, streams) map {
       (resourceDirs, target, cache, s) =>
         val cacheFolder = cache / "hashed-resources"
+
+        // Forcing it to go to "
         val mapOfOriginalToTarget = resourceDirs map {dir =>
-            ((dir ** "*") filter { _.isFile}).get x rebase(dir, target.getPath)
+            ((dir ** "*") filter { _.isFile}).get x rebase(dir, target)
           } flatten
 
         s.log.info("map of original to target\n" + mapOfOriginalToTarget)
 
         val mapOfOriginalToHashedFiles = mapOfOriginalToTarget map { case(original, dest) =>
-            val nameComponents = dest.split('.')
+            val nameComponents = dest.getPath.split('.')
             val newName = nameComponents.dropRight(1).toList ::: "hash" :: nameComponents.last :: Nil
             (original, file(newName.mkString(".")))
         }
